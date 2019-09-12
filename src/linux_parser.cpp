@@ -35,13 +35,13 @@ string LinuxParser::OperatingSystem() {
 
 // DONE: An example of how to read data from the filesystem
 string LinuxParser::Kernel() {
-  string os, kernel;
+  string os, version, kernel;
   string line;
   std::ifstream stream(kProcDirectory + kVersionFilename);
   if (stream.is_open()) {
     std::getline(stream, line);
     std::istringstream linestream(line);
-    linestream >> os >> kernel;
+    linestream >> os >> version >> kernel;
   }
   return kernel;
 }
@@ -67,10 +67,47 @@ vector<int> LinuxParser::Pids() {
 }
 
 // TODO: Read and return the system memory utilization
-float LinuxParser::MemoryUtilization() { return 0.0; }
+float LinuxParser::MemoryUtilization() {
+  string line;
+  string header;
+
+  float freeMemory, totalMemory;
+
+  std::ifstream memFile(kProcDirectory + kMeminfoFilename);
+  if (memFile.is_open()) {
+    while (std::getline(memFile, line)) {
+      std::istringstream lineStream(line);
+      lineStream >> header;
+
+      if (header == "MemTotal:") {
+        lineStream >> totalMemory;
+      }
+      if (header == "MemFree:") {
+        lineStream >> freeMemory;
+      }
+    }
+  }
+
+  return (totalMemory - freeMemory) / totalMemory;
+}
 
 // TODO: Read and return the system uptime
-long LinuxParser::UpTime() { return 0; }
+long LinuxParser::UpTime() { 
+  long uptime = 0;
+
+  std::ifstream upTimeFile(kProcDirectory + kUptimeFilename);
+
+    if (upTimeFile.is_open()) {
+    std::string line;
+    if (std::getline(upTimeFile, line)) {
+      std::istringstream lineStream(line);
+      lineStream >> uptime;
+    }
+  }
+
+  return uptime;
+
+}
 
 // TODO: Read and return the number of jiffies for the system
 long LinuxParser::Jiffies() { return 0; }
