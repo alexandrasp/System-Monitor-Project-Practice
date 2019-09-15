@@ -66,7 +66,7 @@ vector<int> LinuxParser::Pids() {
   return pids;
 }
 
-// TODO: Read and return the system memory utilization
+// DONE: Read and return the system memory utilization
 float LinuxParser::MemoryUtilization() {
   string line;
   string header;
@@ -87,26 +87,23 @@ float LinuxParser::MemoryUtilization() {
       }
     }
   }
-
   return (totalMemory - freeMemory) / totalMemory;
 }
 
-// TODO: Read and return the system uptime
-long LinuxParser::UpTime() { 
+// DONE: Read and return the system uptime
+long LinuxParser::UpTime() {
   long uptime = 0;
 
-  std::ifstream upTimeFile(kProcDirectory + kUptimeFilename);
+  std::ifstream uptimeFile(kProcDirectory + kUptimeFilename);
 
-    if (upTimeFile.is_open()) {
+  if (uptimeFile.is_open()) {
     std::string line;
-    if (std::getline(upTimeFile, line)) {
+    if (std::getline(uptimeFile, line)) {
       std::istringstream lineStream(line);
       lineStream >> uptime;
     }
   }
-
   return uptime;
-
 }
 
 // TODO: Read and return the number of jiffies for the system
@@ -123,7 +120,7 @@ long LinuxParser::ActiveJiffies() { return 0; }
 long LinuxParser::IdleJiffies() { return 0; }
 
 // TODO: Read and return CPU utilization
-vector<string> LinuxParser::CpuUtilization() { 
+vector<string> LinuxParser::CpuUtilization() {
   vector<string> cpuInfo{};
   string line;
   string header;
@@ -133,8 +130,8 @@ vector<string> LinuxParser::CpuUtilization() {
     while (std::getline(cpuFile, line)) {
       std::istringstream lineStream(line);
       lineStream >> header;
-
-      if (header == "cpu") {
+      if (header == "cpu")  // Match CPU line
+      {
         string value;
         while (!lineStream.eof()) {
           lineStream >> value;
@@ -142,16 +139,71 @@ vector<string> LinuxParser::CpuUtilization() {
         }
         break;
       }
-    } 
+    }
   }
-  return cpuInfo;  
+
+  return cpuInfo;
+}
+
+vector<string> LinuxParser::CpuUtilization(int pid) {
+  vector<string> procData{};
+
+  std::ifstream statFile(kProcDirectory + std::to_string(pid) + kStatFilename);
+  if (statFile.is_open()) {
+    std::string line;
+    std::getline(statFile, line);
+
+    std::string value;
+    std::istringstream lineStream(line);
+    while (!lineStream.eof()) {
+      lineStream >> value;
+      procData.push_back(value);
+    }
+  }
+  return procData;
 }
 
 // TODO: Read and return the total number of processes
-int LinuxParser::TotalProcesses() { return 0; }
+int LinuxParser::TotalProcesses() {
+  int totalProcess;
+  string line;
+  string header;
+
+  std::ifstream memInfoFile(kProcDirectory + kStatFilename);
+  if (memInfoFile.is_open()) {
+    while (std::getline(memInfoFile, line)) {
+      std::istringstream lineStream(line);
+      lineStream >> header;
+
+      if(header == "processes") {
+        lineStream >> totalProcess;
+        return totalProcess;
+      }
+    }  
+  }
+  return -1;
+}
 
 // TODO: Read and return the number of running processes
-int LinuxParser::RunningProcesses() { return 0; }
+int LinuxParser::RunningProcesses() { 
+  int processRun;
+  string line;
+  string header;
+
+  std::ifstream memInfoFile(kProcDirectory + kStatFilename);
+  if (memInfoFile.is_open()) {
+    while (std::getline(memInfoFile, line)) {
+      std::istringstream lineStream(line);
+      lineStream >> header;
+
+      if(header == "procs_running") {
+        lineStream >> processRun;
+        return processRun;
+      }
+    }  
+  }
+  return -1;
+}
 
 // TODO: Read and return the command associated with a process
 // REMOVE: [[maybe_unused]] once you define the function
@@ -171,4 +223,9 @@ string LinuxParser::User(int pid[[maybe_unused]]) { return string(); }
 
 // TODO: Read and return the uptime of a process
 // REMOVE: [[maybe_unused]] once you define the function
-long LinuxParser::UpTime(int pid[[maybe_unused]]) { return 0; }
+long LinuxParser::UpTime(int pid) { 
+  vector<string> procData = LinuxParser::CpuUtilization(pid);
+  long startTime = std::stol(procData[ProcessStates::kStartTime]);
+
+  return LinuxParser::UpTime() - (startTime / sysconf(_SC_CLK_TCK));
+}
